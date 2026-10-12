@@ -24,6 +24,11 @@ int getpid(void);
 char* sys_sbrk(int,int);
 int pause(int);
 int uptime(void);
+uint64 getusedmem(void);
+int mprotect(void *);
+int munprotect(void *);
+int sys_mprotect(void *);
+int sys_munprotect(void *);
 
 // ulib.c
 int stat(const char*, struct stat*);

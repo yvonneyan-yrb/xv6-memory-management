@@ -6,6 +6,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "vm.h"
+extern pagetable_t kernel_pagetable;
 
 uint64
 sys_exit(void)
@@ -145,4 +146,28 @@ sys_waitx(void)
   argaddr(2, &stime_addr);
 
   return kwaitx(addr, rtime_addr, stime_addr);
+}
+
+uint64
+sys_getusedmem(void)
+{
+  return walk_used(kernel_pagetable);
+}
+
+uint64
+sys_mprotect(void)
+{
+  uint64 addr;
+
+  argaddr(0, &addr);
+  return mprotect(myproc()->pagetable, addr);
+}
+
+uint64
+sys_munprotect(void)
+{
+  uint64 addr;
+
+  argaddr(0, &addr);
+  return munprotect(myproc()->pagetable, addr);
 }

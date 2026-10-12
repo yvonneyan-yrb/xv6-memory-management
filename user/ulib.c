@@ -159,3 +159,15 @@ sbrklazy(int n) {
   return sys_sbrk(n, SBRK_LAZY);
 }
 
+int
+sys_mprotect(void *addr)
+{
+  return mprotect(addr);
+}
+
+int
+sys_munprotect(void *addr)
+{
+  return munprotect(addr);
+}
+

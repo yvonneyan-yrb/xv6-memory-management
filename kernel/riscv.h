@@ -241,6 +241,11 @@ r_satp()
 }
 
 // Supervisor Trap Cause
+#define SCAUSE_USER_ECALL             8
+#define SCAUSE_INSTRUCTION_PAGE_FAULT 12
+#define SCAUSE_LOAD_PAGE_FAULT        13
+#define SCAUSE_STORE_PAGE_FAULT       15
+
 static inline uint64
 r_scause()
 {

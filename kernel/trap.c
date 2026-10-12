@@ -51,7 +51,9 @@ usertrap(void)
   // save user program counter.
   p->trapframe->epc = r_sepc();
   
-  if(r_scause() == 8){
+  uint64 cause = r_scause();
+
+  if(cause == SCAUSE_USER_ECALL){
     // system call
 
     if(killed(p))
@@ -65,11 +67,29 @@ usertrap(void)
     // so enable only now that we're done with those registers.
     intr_on();
 
-    syscall();
+        syscall();
   } else if((which_dev = devintr()) != 0){
-    // ok
-  } else if((r_scause() == 15 || r_scause() == 13) &&
-            vmfault(p->pagetable, r_stval(), (r_scause() == 13)? 1 : 0) != 0) {
+    // Timer or device interrupt handled.
+  } else if(cause == SCAUSE_LOAD_PAGE_FAULT ||
+            cause == SCAUSE_STORE_PAGE_FAULT ||
+            cause == SCAUSE_INSTRUCTION_PAGE_FAULT){
+    uint64 va = r_stval();
+
+    int resolved = 0;
+
+    // Only data accesses can be resolved by lazy heap allocation.
+    // Never resolve an access to the null-pointer page.
+    if(va >= PGSIZE &&
+       cause != SCAUSE_INSTRUCTION_PAGE_FAULT){
+      resolved =
+        vmfault(p->pagetable, va,
+                cause == SCAUSE_LOAD_PAGE_FAULT) != 0;
+    }
+
+    if(!resolved){
+      printf("Segmentation Fault!\n");
+      setkilled(p);
+    }
     // page fault on lazily-allocated page
   } else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);

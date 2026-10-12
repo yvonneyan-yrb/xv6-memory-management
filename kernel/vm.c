@@ -277,6 +277,31 @@ freewalk(pagetable_t pagetable)
   kfree((void*)pagetable);
 }
 
+// Return bytes represented by valid leaf mappings in this tree.
+uint64
+walk_used(pagetable_t pagetable)
+{
+  uint64 bytes = 0;
+
+  for(int i = 0; i < PGSIZE / sizeof(pte_t); i++){
+    pte_t pte = pagetable[i];
+
+    if((pte & PTE_V) == 0)
+      continue;
+
+    if(pte & (PTE_R | PTE_W | PTE_X)){
+      // A leaf PTE maps a memory page.
+      bytes += PGSIZE;
+    } else {
+      // A non-leaf PTE points to another page table.
+      pagetable_t child = (pagetable_t)PTE2PA(pte);
+      bytes += walk_used(child);
+    }
+  }
+
+  return bytes;
+}
+
 // Free user memory pages,
 // then free page-table pages.
 void
@@ -482,5 +507,53 @@ ismapped(pagetable_t pagetable, uint64 va)
   if (*pte & PTE_V){
     return 1;
   }
+  return 0;
+}
+
+// Make the user page containing va read-only.
+int
+mprotect(pagetable_t pagetable, uint64 va)
+{
+  struct proc *p = myproc();
+  pte_t *pte;
+
+  if(va >= MAXVA || va >= p->sz)
+    return -1;
+
+  pte = walk(pagetable, va, 0);
+
+  if(pte == 0 ||
+     (*pte & PTE_V) == 0 ||
+     (*pte & PTE_U) == 0 ||
+     (*pte & (PTE_R | PTE_W | PTE_X)) == 0)
+    return -1;
+
+  *pte &= ~PTE_W;
+  sfence_vma();
+
+  return 0;
+}
+
+// Restore write permission on the user page containing va.
+int
+munprotect(pagetable_t pagetable, uint64 va)
+{
+  struct proc *p = myproc();
+  pte_t *pte;
+
+  if(va >= MAXVA || va >= p->sz)
+    return -1;
+
+  pte = walk(pagetable, va, 0);
+
+  if(pte == 0 ||
+     (*pte & PTE_V) == 0 ||
+     (*pte & PTE_U) == 0 ||
+     (*pte & (PTE_R | PTE_W | PTE_X)) == 0)
+    return -1;
+
+  *pte |= PTE_W;
+  sfence_vma();
+
   return 0;
 }

@@ -78,6 +78,9 @@ kexec(char *path, char **argv)
   end_op();
   ip = 0;
 
+  // Prevent user access to the null-pointer page.
+  uvmclear(pagetable, 0);
+
   p = myproc();
   uint64 oldsz = p->sz;
 
@@ -230,6 +233,9 @@ kexecp(char *path, int priority, char **argv)
   iunlockput(ip);
   end_op();
   ip = 0;
+
+  // Prevent user access to the null-pointer page.
+  uvmclear(pagetable, 0);
 
   p = myproc();
   uint64 oldsz = p->sz;
